@@ -28,12 +28,16 @@ install:
 dev:
 	$(info [*] Installing pipenv project dependencies)
 	@$(PIPENV) install
-	@$(PIPENV) install -d
+	@$(PIPENV) install -d --pre
+	pre-commit install
 
 shell:
 	@$(PIPENV) shell
 
-build: ##=> Same as package except that we don't create a ZIP
+check:
+	pre-commit run --all-files
+
+build: check ##=> Same as package except that we don't create a ZIP
 	sam build --use-container
 
 deploy.guided: ##=> Guided deploy that is typically run for the first time only
