@@ -1,0 +1,48 @@
+trigger:
+  - main
+  - develop
+  - feature/*
+
+variables:
+  - group: 'AWS Admin Dev'
+
+stages:
+  - stage: ci
+    displayName: 'AWS SAM Build'
+    jobs:
+      - job:
+        pool: default
+        container:
+          image: bsngroup/aws-sam-build:latest
+          options: --user 0:0 --volume /var/run/docker.sock:/var/run/docker.sock
+        steps:
+          - bash: |
+              make dev
+              make build
+          - publish: $(System.DefaultWorkingDirectory)/.aws-sam
+            artifact: .aws-sam
+
+  - stage: DevDeploy
+    displayName: 'Deploying to Dev'
+    jobs:
+      - job:
+        pool: default
+        container:
+          image: bsngroup/aws-sam-build:latest
+          options:
+            --volume /var/run/docker.sock:/var/run/docker.sock
+            -e AWS_ACCESS_KEY_ID=$(AwsAccessKeyIdDev)
+            -e AWS_SECRET_ACCESS_KEY=$(AwsSecretAccessKeyDev)
+            -e AWS_DEFAULT_REGION=$(AWSRegionDev)
+            -e ProfileName=$(ProfileNameDev)
+            -e SAM_CLI_TELEMETRY=0
+        variables:
+          StackName: 'Dev'
+        steps:
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              downloadType: 'single'
+              artifactName: .aws-sam
+              downloadPath: $(Agent.BuildDirectory)/build
+          - bash: |
+              make deploy
