@@ -1,7 +1,8 @@
 BASE := $(shell /bin/pwd)
 CODE_COVERAGE = 72
 PIPENV ?= pipenv
-
+PRECOMMIT ?= pipenv run pre-commit
+ENV ?= dev
 #############
 #  SAM vars	#
 #############
@@ -29,13 +30,12 @@ dev:
 	$(info [*] Installing pipenv project dependencies)
 	@$(PIPENV) install
 	@$(PIPENV) install -d --pre
-	pre-commit install
 
 shell:
 	@$(PIPENV) shell
 
 check:
-	pre-commit run --all-files
+	@$(PRECOMMIT) run --all-files
 
 build: check ##=> Same as package except that we don't create a ZIP
 	sam build --use-container
@@ -44,10 +44,10 @@ deploy.guided: ##=> Guided deploy that is typically run for the first time only
 	sam deploy --guided
 
 deploy: ##=> Deploy app using previously saved SAM CLI configuration
-	sam deploy
+	sam deploy --stack-name=link-scraper-${ENV} --resolve-s3 --capabilities CAPABILITY_IAM
 
 invoke: ##=> Run SAM Local function with a given event payload
-	@sam local invoke HelloWorldFunction --event events/hello_world_event.json
+	@sam local invoke LinkParser --event events/hello_world_event.json
 
 run: ##=> Run SAM Local API GW and can optionally run new containers connected to a defined network
 	@test -z ${NETWORK} \
